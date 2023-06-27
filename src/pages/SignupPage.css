@@ -1,0 +1,81 @@
+.sign-up{
+  background-color:#1B1B1B;
+  display:flex;
+height:100vh;
+}
+
+.signup-intro{
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  max-width:40%
+}
+
+h1{
+  margin:60px 0px;
+  color:#fff;
+  font-size:32px;
+  text-transform:capitalize;
+  font-weight:400;
+  max-width:80%;
+  line-height:1.6
+
+}
+.hero{
+width:350px
+}
+
+.signup-details{
+  background-color:#fff;
+  border-radius:20px 0px 20px 0px;
+  padding:20px;
+  width:60%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center
+}
+h3{
+font-size:32px;
+font-weight:bold;
+margin-bottom:30px;
+color:#1B1B1B
+}
+
+form{
+  display:flex;
+  flex-direction:column;
+  width:80%
+}
+
+form button{
+  margin-top:35px;
+ padding:12px;
+ border-radius:0px
+}
+
+.logoMobile{
+display:none;
+}
+.login{
+  font-size:14px;
+   margin-top:20px;
+   text-transform:capitalize;
+
+}
+.login span{
+  font-weight:bold;
+  color:#1B1B1B
+
+}
+@media (max-width:992px){
+  .signup-intro{
+  display:none;
+  }
+  .signup-details{
+    margin:auto
+  }
+ .logoMobile{
+display:flex;
+}
+}
