@@ -6,98 +6,99 @@ import { Sidebar } from "react-pro-sidebar";
 import { Img, Input, Text } from "components";
 import { useDispatch, useSelector } from 'react-redux';
 import { connect } from 'react-redux';
+const { v4: uuidv4 } = require('uuid');
 
 const TVTwoPage = () => {
+
   const [chatHistory, setChatHistory] = useState([]);
-  const [chatRows, setChatRows] = useState([]);
-  const [chatRow, setChatRow] = useState("");
+  const [chatParents, setChatParents] = useState([]);
   const [question, setQuestion] = useState("");
-  const input = useRef(null)
+  const input = useRef(null);
+   const [parentId,setParentId] = useState('')
   const user1 = useSelector(state => state.user);
-  const [user, serUser] = useState(user1.login.user.user)
-  console.log(user1)
+  const [user, setUser] = useState(user1.login.user.user);
+
   useEffect(() => {
-    fetchChatRows();
+    fetchChatParents();
+
+
+    console.log(chatHistory)
   }, []);
+
   
-      const fetchChatRows = async () => {
-        try {
-          const response = await axios.get(`http://localhost:5001/chatRows?userId=${user1.login.user.user}`);
-          setChatRows(response.data);
-        } catch (error) {
-          console.error(error);
-        }
-      };
-  console.log(user1.login.user)
-   
-  // const handleAddChat = async (e) => {
-  //   e.preventDefault();
-  //   try {
-      
-  //       const response = await axios.post(`http://localhost:5001/addChatRow`, {
-  //         chatRow,
-  //         userId:user, // assuming 'user' is the user object and '_id' is the user's ID
-  //         questions: [question],
-  //       });
-  
-  //     console.log(response.data.message);
-  //     setChatRow("");
-  //     fetchChatRows();
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-  const handleQuestionSubmit = async (e) => {
-    e.preventDefault();
+
+  const fetchChatParents = async () => {
     try {
-      const response = await axios.post('http://127.0.0.1:8000/chat', { "message": question });
-      console.log(response.data.response);
-      setQuestion(input.current.value);
-
-      // Update the chat history
-      setChatHistory([...chatHistory, { question, answer: response.data.response }]);
-      // Add the new chat row and question to the backend
-      await axios.post("http://localhost:5001/addChatRow", {
-        chatRow: response.data.response,
-
-        userId: user, // assuming 'user' is the user object and '_id' is the user's ID
-        question: [{ text: question, answers: response.data.response }]
-
-
+      const response = await axios.get("http://localhost:5001/chatParents", {
+        params: { userId: user },
       });
-      // await axios.post(`http://localhost:5001/addQuestion`, {
-      //   question,
-      // });
-
-      // Clear the question state
-    
-  
-      // Fetch the updated chat rows
-      fetchChatRows();
+      setChatParents([...chatParents,response.data]);
+      // console.log(chatParents)
     } catch (error) {
       console.error(error);
     }
   };
 
-  // const handleAddChat = async () => {
-  //   try {
-  //     const response = await axios.post("http://localhost:5000/addChat", {
-  //       chatRow: "Chat Row",
-  //       user: "User",
-  //       questions: [
-  //         {
-  //           text: question,
-  //           answers: [],
-  //         },
-  //       ],
-  //     });
 
-  //     console.log(response.data.message);
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
+  const handleChatParentClick = async (chatParentId) => {
+    // fetchChatRows()
+    try {
+      const response = await axios.get("http://localhost:5001/chatRows", {
+        params: { userId: user, chatParent: chatParentId },
+      });
+      
+      setParentId(chatParentId._id)
+      setChatHistory([])
+      setChatHistory([response.data.chatParent.chatRows]);
+      // console.log(chatHistory)
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
+  const handleQuestionSubmit = async (e) => {
+    e.preventDefault();
+    const question = input.current.value;
+    setQuestion(question);
+    try {
+      // console.log(chatHistory, chatParents, chatParents[0][chatParents.length - 1]._id, user)
+      const response = await axios.post('http://127.0.0.1:8000/chat', { "message": question });
+     await axios.post("http://localhost:5001/addChatRow", {
+       chatParent: parentId,
+        userId: user,
+        question: question,
+        answer: response.data.response
+      });
+      const newChat = { question: question, answer: response.data.response, _id: chatParents[0][chatParents.length - 1]._id };
+      console.log(parentId)
+   
+       setChatHistory( [...chatHistory, [newChat]]);
+      console.log(newChat)
+      setQuestion("");
+    } catch (error) {
+      console.error(error);
+    }
+    console.log(chatHistory)
+  };
+
+
+  const handleAddChat = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post("http://localhost:5001/addChatParent", {
+        userId: user,
+        
+      });
+  
+      const newChatParentId = response.data.chatParentId;
+      console.log(response.data)
+      setParentId(newChatParentId)
+      setChatParents([...chatParents, []]);
+      setChatHistory([])
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
 
 
@@ -130,7 +131,7 @@ const TVTwoPage = () => {
               <form className="flex flex-col">
                 <button
                   type={'submit'}
-                  // onClick={handleAddChat}
+                  onClick={handleAddChat}
                   className="bg-white-A700 text-gray-900_cc flex mb-4 py-2 px-16 mx-auto w-full shadow"
                 >
                   <span className="text-gray-900_cc">Add Chat</span>
@@ -143,7 +144,7 @@ const TVTwoPage = () => {
                 <div className="flex flex-col gap-[15px] items-start justify-start w-auto">
                   <div className="flex flex-col items-start justify-start w-auto">
                     <Text
-                      className="capitalize text-[8px] text-red-200 w-[26px]"
+                      className="capitalize text-[10px] text-red-200 "
                       size="txtPoppinsBold8"
                     >
                       Today
@@ -151,24 +152,33 @@ const TVTwoPage = () => {
                   </div>
                   <div className="flex flex-col items-start justify-start w-auto">
                     <div className="flex flex-col gap-[15px] items-start justify-start w-auto">
-                      {chatRows.map((chatRow, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-row gap-[7px] items-center justify-center w-auto"
-                        >
-                          <Img
-                            className="h-3.5 w-4"
-                            src="images/img_computer.svg"
-                            alt={`computer_${index}`}
-                          />
-                          <Text
-                            className="capitalize text-base text-white-A700 w-[39px]"
-                            size="txtPoppinsRegular16"
-                          >
-                            {chatRow.questions[0].text}
-                          </Text>
-                        </div>
-                      ))}
+                      {chatParents &&
+                        chatParents.map(item => item.filter(item => item && item.chatRows && item.chatRows.length > 0)
+                          .map((chatParent, index) =>
+                            chatParent.chatRows.map((item, itemIndex) => (
+                              <div
+                                key={itemIndex}
+                                className="flex flex-row gap-[7px] items-center justify-center w-auto cursor-pointer"  
+                                onClick={() => handleChatParentClick(chatParent)}
+                              >
+                                <Img
+                                  className="h-3.5 w-4"
+                                  src="images/img_computer.svg"
+                                  alt={`computer_${index}`}
+                                />
+                                <Text
+                                  className="capitalize text-base text-white-A700 w-[39px]"
+                                  size="txtPoppinsRegular16"
+                                >
+                                  {item.question}
+                             
+                                </Text>
+                              </div>
+                            ))
+                          ))}
+
+
+
                     </div>
                   </div>
                 </div>
@@ -177,7 +187,7 @@ const TVTwoPage = () => {
                 <div className="flex flex-col gap-[15px] items-start justify-start w-auto">
                   <div className="flex flex-col items-start justify-start w-auto">
                     <Text
-                      className="capitalize text-[8px] text-red-200 w-[42px]"
+                      className="capitalize text-[10px] text-red-200 "
                       size="txtPoppinsBold8"
                     >
                       Last week
@@ -185,24 +195,34 @@ const TVTwoPage = () => {
                   </div>
                   <div className="flex flex-col items-start justify-start w-auto">
                     <div className="flex flex-col gap-[15px] items-start justify-start w-auto">
-                      {chatRows.map((chatRow, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-row gap-[7px] items-center justify-center w-auto"
-                        >
-                          <Img
-                            className="h-3.5 w-4"
-                            src="images/img_computer.svg"
-                            alt={`computer_${index}`}
-                          />
-                          <Text
-                            className="capitalize text-base text-white-A700 w-[39px]"
-                            size="txtPoppinsRegular16"
-                          >
-                            {chatRow.questions[0].text}
-                          </Text>
-                        </div>
-                      ))}
+                      {chatParents &&
+                        chatParents.map(item => item.filter(item => item && item.chatRows && item.chatRows.length > 0)
+                          .map((chatParent, index) =>
+                            chatParent.chatRows.map((item, itemIndex) => (
+                              <div
+                                key={itemIndex}
+                                className="flex flex-row gap-[7px] items-center justify-center w-auto cursor-pointer"
+                                onClick={() => handleChatParentClick(chatParent)}
+                              >
+                                <Img
+                                  className="h-3.5 w-4"
+                                  src="images/img_computer.svg"
+                                  alt={`computer_${index}`}
+                                />
+                                <Text
+                                  className="capitalize text-base text-white-A700 w-[39px]"
+                                  size="txtPoppinsRegular16"
+                                >
+                                  {item.question}
+
+                                </Text>
+                              </div>
+                            ))
+                          ))}
+
+                      
+                        
+
                     </div>
                   </div>
                 </div>
@@ -238,26 +258,29 @@ const TVTwoPage = () => {
           </div>
           <div className="flex flex-col items-left justify-end h-full w-full pb-2">
             <div className="chat-history overflow-auto">
-              {chatHistory.map((chat, index) => (
-                <div key={index} className="flex flex-col gap-2 mb-4">
-                  <div className="flex items-center gap-2">
-                    <img
-                      className="h-8 w-8 rounded-full"
-                      src="https://via.placeholder.com/32"
-                      alt="User"
-                    />
-                    <p className="bg-blue-200 rounded p-2">{chat.question}</p>
+
+                {chatHistory[0] && chatHistory.filter(item => item.length > 0).map((chat, index) => (
+               
+                  <div key={index} className="flex flex-col gap-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <img
+                        className="h-8 w-8 rounded-full"
+                        src="https://via.placeholder.com/32"
+                        alt="User"
+                      />
+                      <p className="bg-blue-200 rounded p-2">{chat[0].question}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img
+                        className="h-8 w-8 rounded-full"
+                        src="https://via.placeholder.com/32"
+                        alt="Chat"
+                      />
+                      <p className="bg-green-200 rounded p-2">{chat[0].answer}</p>
+                      {console.log(chat)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <img
-                      className="h-8 w-8 rounded-full"
-                      src="https://via.placeholder.com/32"
-                      alt="Chat"
-                    />
-                    <p className="bg-green-200 rounded p-2">{chat.answer}</p>
-                  </div>
-                </div>
-              ))}
+                ))} 
             </div>
             <form className="flex flex-col w-full mt-4">
               <div className="flex items-center bg-white border border-blue-200 rounded p-2">

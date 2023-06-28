@@ -20,28 +20,21 @@ const formDataSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", formDataSchema);
 
-const chatSchema = new mongoose.Schema({
-  chatRow: {
-    type: String,
-    required: true
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  },
-  questions: [
-    {
-      text: {
-        type: String,
-        required: true
-      },
-      answers: String
-    }
-  ]
+
+
+const ChatRowSchema = new mongoose.Schema({
+  question: String,
+  answer: String
 });
 
-const Chat = mongoose.model("Chat", chatSchema);
+const ChatParentSchema = new mongoose.Schema({
+  userId: String,
+  chatRows: [ChatRowSchema]
+});
+
+const ChatParent = mongoose.model('ChatParent', ChatParentSchema);
+
+
 
 app.post("/register", async (req, res) => {
   const { username, password, email } = req.body;
@@ -62,85 +55,64 @@ app.post("/login", async (req, res) => {
   res.status(200).json({ username: user.username, userId: user._id });
 });
 
+
+
 app.get("/chatRows", async (req, res) => {
+  const { userId, chatParent } = req.query;
   try {
-    const chatRows = await Chat.find({ user: req.userId }).populate("user");
-    res.status(200).json(chatRows);
+  
+    const chats = await ChatParent.find({ user: userId, chatParent: chatParent });
+    res.status(200).json(req.query);
   } catch (error) {
     console.error("Failed to fetch chat rows:", error);
     res.status(500).json({ error: "Failed to fetch chat rows" });
   }
 });
 
+// Route to add a new chat parent
+app.post('/addChatParent', async (req, res) => {
+  const chatParent = new ChatParent({
+    userId: req.body.userId,
+    chatRows: []
+  });
 
-app.post("/addChatRow", async (req, res) => {
-  const { chatRow,userId,question } = req.body;
-console.log(req.body)
   try {
-   const newChatRow = new Chat({
-      chatRow,
-      user: userId,
-      question:question,
-    });
-
-    await newChatRow.save();
-
-    res.status(201).json({ message: "Chat row added successfully" });
+    await chatParent.save();
+ res.json({ message: 'Chat parent added successfully', chatParentId: chatParent._id });
   } catch (error) {
-    console.error("Failed to add chat row:", error);
-    res.status(500).json({ error: "Failed to add chat row" });
+    res.status(500).json({ error: error.toString() });
+  }
+});
+// app.post('/getChatParent', async (req, res) => {
+//   const chatParentsId = await ChatParent.find({ userId: req.query.userId });
+
+// })
+// Route to add a new chat row to a chat parent
+
+app.post('/addChatRow', async (req, res) => {
+  try {
+    const chatParent = await ChatParent.findOne({ _id: req.body.chatParent });
+    if (!chatParent) {
+
+      return res.status(404).json({ error: 'Chat parent not found' });
+    }
+    chatParent.chatRows.push({ question: req.body.question, answer: req.body.answer });
+    await chatParent.save();
+    res.json({ message: 'Chat row added successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.toString() });
+  }
+});
+// Route to get all chat parents for a user
+app.get('/chatParents', async (req, res) => {
+  try {
+    const chatParents = await ChatParent.find({ userId: req.query.userId });
+    res.json(chatParents);
+  } catch (error) {
+    res.status(500).json({ error: error.toString() });
   }
 });
 
-app.post("/addQuestion/:chatRowId", async (req, res) => {
-  const { question } = req.body;
-  const { chatRowId } = req.params;
-
-  try {
-    const chatRow = await Chat.findById(chatRowId);
-    if (!chatRow) {
-      return res.status(404).send("Chat row not found");
-    }
-
-    const newQuestion = {
-      text: question,
-      answers: [],
-    };
-
-    chatRow.questions.push(newQuestion);
-    await chatRow.save();
-
-    res.status(200).json({ message: "Question added successfully" });
-  } catch (error) {
-    console.error("Failed to add question:", error);
-    res.status(500).json({ error: "Failed to add question" });
-  }
-});
-
-app.post("/addAnswer/:chatRowId/:questionIndex", async (req, res) => {
-  const { answer } = req.body;
-  const { chatRowId, questionIndex } = req.params;
-
-  try {
-    const chatRow = await Chat.findById(chatRowId);
-    if (!chatRow) {
-      return res.status(404).send("Chat row not found");
-    }
-
-    const question = chatRow.questions[questionIndex];
-    if (!question) {
-      return res.status(404).send("Question not found");
-    }
-
-    question.answers.push(answer);
-    await chatRow.save();
-
-    res.status(200).json({ message: "Answer added successfully" });
-  } catch (error) {
-    console.error("Failed to add answer:", error);
-    res.status(500).json({ error: "Failed to add answer" });
-  }
-});
 
 app.listen(5001, () => {
   console.log("Server is running on port 5001");
